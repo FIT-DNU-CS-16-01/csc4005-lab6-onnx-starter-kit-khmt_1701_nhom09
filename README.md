@@ -9,6 +9,10 @@ Starter kit này dành cho **Lab 6 – Export ONNX + Consistency Test + Benchmar
 - Mã sinh viên: 1771040029
 - Lớp: KHMT 1701
 
+- Họ tên: Nguyễn Hoàng Anh
+- Mã sinh viên: 1771040002
+- Lớp: KHMT 1701
+
 > Lab này nối tiếp trực tiếp case study **Smart Campus Scene Classification with Vision Transformer**. Sinh viên sử dụng checkpoint `best_model.pt` đã huấn luyện ở lab ViT trước đó, export mô hình PyTorch sang ONNX, kiểm thử độ nhất quán đầu ra PyTorch–ONNX, sau đó benchmark latency, throughput và model size.
 
 ## 1. Mục tiêu

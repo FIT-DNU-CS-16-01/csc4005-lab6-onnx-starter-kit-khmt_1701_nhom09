@@ -5,6 +5,11 @@
 - Họ tên: Lưu Thanh Tùng
 - Mã sinh viên: 1771040029
 - Lớp: KHMT 1701
+
+- Họ tên: Nguyễn Hoàng Anh
+- Mã sinh viên: 1771040002
+- Lớp: KHMT 1701
+
 - Link GitHub repo: https://github.com/FIT-DNU-CS-16-01/fit-dnu-cs-16-01-17-01-csc4005-csc4005_lab6_onnx_starter_kit-csc4005_lab6_onnx_starter_kit
 - Link checkpoint hoặc mô tả checkpoint sử dụng: checkpoints/best_model.pt (lấy từ lab ViT trước, dung lượng đo được ~327.37 MB)
 - Link file ONNX nếu không commit trực tiếp: outputs/vit_smartcampus.onnx (dung lượng ~327.72 MB, lưu cục bộ do file lớn)
