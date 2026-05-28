@@ -1,0 +1,19 @@
+{
+  "checkpoint": "checkpoints/best_model.pt",
+  "onnx_path": "outputs/vit_smartcampus.onnx",
+  "num_samples": 32,
+  "batch_size": 8,
+  "max_abs_diff": 4.291534423828125e-05,
+  "mean_abs_diff": 9.5015391252673e-06,
+  "pred_match_rate": 1.0,
+  "atol": 0.0001,
+  "rtol": 0.001,
+  "passed": true,
+  "wandb": {
+    "enabled": true,
+    "run_id": "8osxvqzg",
+    "run_name": "consistency_onnx_lab6_full",
+    "run_url": "https://wandb.ai/thanhtung-contact-official-/csc4005-lab6-onnx/runs/8osxvqzg",
+    "project": "csc4005-lab6-onnx"
+  }
+}

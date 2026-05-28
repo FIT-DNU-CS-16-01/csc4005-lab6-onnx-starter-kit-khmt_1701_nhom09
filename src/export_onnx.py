@@ -63,17 +63,32 @@ def main() -> None:
             args.output_name: {0: "batch_size"},
         }
 
-    torch.onnx.export(
-        model,
-        dummy_input,
-        str(onnx_path),
-        export_params=True,
-        opset_version=args.opset,
-        do_constant_folding=True,
-        input_names=[args.input_name],
-        output_names=[args.output_name],
-        dynamic_axes=dynamic_axes,
-    )
+    mha_backend = getattr(torch.backends, "mha", None)
+    prev_fastpath_enabled = None
+    if (
+        mha_backend is not None
+        and hasattr(mha_backend, "get_fastpath_enabled")
+        and hasattr(mha_backend, "set_fastpath_enabled")
+    ):
+        # Disable MHA fastpath so ViT export avoids unsupported aten::_native_multi_head_attention.
+        prev_fastpath_enabled = mha_backend.get_fastpath_enabled()
+        mha_backend.set_fastpath_enabled(False)
+
+    try:
+        torch.onnx.export(
+            model,
+            dummy_input,
+            str(onnx_path),
+            export_params=True,
+            opset_version=args.opset,
+            do_constant_folding=True,
+            input_names=[args.input_name],
+            output_names=[args.output_name],
+            dynamic_axes=dynamic_axes,
+        )
+    finally:
+        if prev_fastpath_enabled is not None:
+            mha_backend.set_fastpath_enabled(prev_fastpath_enabled)
 
     onnx_model = onnx.load(str(onnx_path))
     onnx.checker.check_model(onnx_model)

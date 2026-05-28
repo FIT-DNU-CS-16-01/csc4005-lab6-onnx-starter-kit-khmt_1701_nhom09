@@ -1,0 +1,74 @@
+{
+  "checkpoint": "checkpoints/best_model.pt",
+  "onnx_path": "outputs/vit_smartcampus.onnx",
+  "warmup": 10,
+  "repeat": 50,
+  "batch_sizes": [
+    1,
+    4,
+    8
+  ],
+  "rows": [
+    {
+      "runtime": "PyTorch",
+      "batch_size": 1,
+      "mean_latency_ms": 204.09008000013273,
+      "median_latency_ms": 201.28630000090197,
+      "p95_latency_ms": 221.10145499955252,
+      "throughput_img_per_sec": 4.899797187591624,
+      "model_size_mb": 327.36964988708496
+    },
+    {
+      "runtime": "ONNXRuntime",
+      "batch_size": 1,
+      "mean_latency_ms": 171.53986600013013,
+      "median_latency_ms": 169.9537499998769,
+      "p95_latency_ms": 195.54952500084252,
+      "throughput_img_per_sec": 5.829548683448554,
+      "model_size_mb": 327.7179412841797
+    },
+    {
+      "runtime": "PyTorch",
+      "batch_size": 4,
+      "mean_latency_ms": 709.8521380000238,
+      "median_latency_ms": 699.9237999998513,
+      "p95_latency_ms": 790.7157050000933,
+      "throughput_img_per_sec": 5.634976336437921,
+      "model_size_mb": 327.36964988708496
+    },
+    {
+      "runtime": "ONNXRuntime",
+      "batch_size": 4,
+      "mean_latency_ms": 693.2642999999734,
+      "median_latency_ms": 680.312249999588,
+      "p95_latency_ms": 751.9504450004206,
+      "throughput_img_per_sec": 5.769805253205961,
+      "model_size_mb": 327.7179412841797
+    },
+    {
+      "runtime": "PyTorch",
+      "batch_size": 8,
+      "mean_latency_ms": 1443.0361520000952,
+      "median_latency_ms": 1406.2101500012432,
+      "p95_latency_ms": 1650.1163499996437,
+      "throughput_img_per_sec": 5.543866651512326,
+      "model_size_mb": 327.36964988708496
+    },
+    {
+      "runtime": "ONNXRuntime",
+      "batch_size": 8,
+      "mean_latency_ms": 1470.4795339999328,
+      "median_latency_ms": 1452.9398499998933,
+      "p95_latency_ms": 1651.1158749998685,
+      "throughput_img_per_sec": 5.440402137552201,
+      "model_size_mb": 327.7179412841797
+    }
+  ],
+  "wandb": {
+    "enabled": true,
+    "run_id": "we8dmiy3",
+    "run_name": "benchmark_onnx_lab6_full_1050",
+    "run_url": "https://wandb.ai/thanhtung-contact-official-/csc4005-lab6-onnx/runs/we8dmiy3",
+    "project": "csc4005-lab6-onnx"
+  }
+}

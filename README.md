@@ -3,6 +3,12 @@
 
 Starter kit này dành cho **Lab 6 – Export ONNX + Consistency Test + Benchmark** của học phần **CSC4005 – Học sâu**.
 
+## Thông tin sinh viên
+
+- Họ tên: Lưu Thanh Tùng
+- Mã sinh viên: 1771040029
+- Lớp: KHMT 1701
+
 > Lab này nối tiếp trực tiếp case study **Smart Campus Scene Classification with Vision Transformer**. Sinh viên sử dụng checkpoint `best_model.pt` đã huấn luyện ở lab ViT trước đó, export mô hình PyTorch sang ONNX, kiểm thử độ nhất quán đầu ra PyTorch–ONNX, sau đó benchmark latency, throughput và model size.
 
 ## 1. Mục tiêu
@@ -95,6 +101,12 @@ csc4005_lab6_onnx_consistency_benchmark_starter/
 
 ## 4. Chuẩn bị môi trường
 
+Môi trường đã dùng để chạy bài nộp:
+
+```bash
+conda activate HocSau
+```
+
 ### macOS / Linux
 
 ```bash
@@ -166,7 +178,10 @@ python -m src.consistency_test \
   --num_samples 32 \
   --batch_size 8 \
   --atol 1e-4 \
-  --rtol 1e-3
+  --rtol 1e-3 \
+  --use_wandb \
+  --wandb_project csc4005-lab6-onnx \
+  --wandb_run_name consistency_onnx
 ```
 
 Output kỳ vọng:
@@ -193,7 +208,10 @@ python -m src.benchmark \
   --data_dir data/mit_indoor_smartcampus_5 \
   --batch_sizes 1 4 8 \
   --warmup 10 \
-  --repeat 50
+  --repeat 50 \
+  --use_wandb \
+  --wandb_project csc4005-lab6-onnx \
+  --wandb_run_name benchmark_onnx
 ```
 
 Output kỳ vọng:
@@ -255,3 +273,91 @@ Không nên commit file `.pt`, `.onnx`, dataset hoặc output quá lớn nếu G
 | Export lỗi dynamic shape | Khai báo dynamic axes sai | Dùng `--dynamic_batch` mặc định |
 | ONNXRuntime không import được | Chưa cài `onnxruntime` | Chạy lại `pip install -r requirements.txt` |
 | File ONNX quá lớn | ViT-base có nhiều tham số | Không commit file lớn; chỉ nộp report và link lưu trữ |
+
+## 12. Kết quả thực nghiệm của bài nộp
+
+### 12.1. Export ONNX
+
+- File ONNX: `outputs/vit_smartcampus.onnx`
+- Opset: `17`
+- Dynamic batch: `true`
+- Input/Output name: `input` / `logits`
+- ONNX size: `327.72 MB`
+- Trạng thái: `exported_and_checked`
+
+Nguồn số liệu: `outputs/export_report.json`.
+
+### 12.2. Consistency test
+
+- passed: `true`
+- num_samples: `32`
+- batch_size: `8`
+- max_abs_diff: `4.291534423828125e-05`
+- mean_abs_diff: `9.5015391252673e-06`
+- pred_match_rate: `1.0`
+- atol/rtol: `1e-4` / `1e-3`
+
+Nguồn số liệu: `outputs/consistency_report.json`.
+
+### 12.3. Benchmark (warmup=10, repeat=50)
+
+| Runtime | Batch size | Mean latency (ms) | Median latency (ms) | P95 latency (ms) | Throughput (img/s) | Model size (MB) |
+|---|---:|---:|---:|---:|---:|---:|
+| PyTorch | 1 | 204.09 | 201.29 | 221.10 | 4.90 | 327.37 |
+| ONNXRuntime | 1 | 171.54 | 169.95 | 195.55 | 5.83 | 327.72 |
+| PyTorch | 4 | 709.85 | 699.92 | 790.72 | 5.63 | 327.37 |
+| ONNXRuntime | 4 | 693.26 | 680.31 | 751.95 | 5.77 | 327.72 |
+| PyTorch | 8 | 1443.04 | 1406.21 | 1650.12 | 5.54 | 327.37 |
+| ONNXRuntime | 8 | 1470.48 | 1452.94 | 1651.12 | 5.44 | 327.72 |
+
+Nguồn số liệu: `outputs/benchmark_summary.json` và `outputs/benchmark_results.csv`.
+
+## 13. Liên kết W&B
+
+- Consistency run: https://wandb.ai/thanhtung-contact-official-/csc4005-lab6-onnx/runs/8osxvqzg
+- Benchmark run (10/50): https://wandb.ai/thanhtung-contact-official-/csc4005-lab6-onnx/runs/we8dmiy3
+
+## 14. Lệnh tái lập nhanh (môi trường HocSau)
+
+```bash
+conda activate HocSau
+
+python -m src.export_onnx \
+  --checkpoint checkpoints/best_model.pt \
+  --onnx_path outputs/vit_smartcampus.onnx \
+  --model_name vit_b_16 \
+  --img_size 224 \
+  --opset 17 \
+  --dynamic_batch
+
+python -m src.consistency_test \
+  --checkpoint checkpoints/best_model.pt \
+  --onnx_path outputs/vit_smartcampus.onnx \
+  --num_samples 32 \
+  --batch_size 8 \
+  --atol 1e-4 \
+  --rtol 1e-3 \
+  --use_wandb \
+  --wandb_project csc4005-lab6-onnx \
+  --wandb_run_name consistency_onnx_lab6_full \
+  --wandb_mode online
+
+python -m src.benchmark \
+  --checkpoint checkpoints/best_model.pt \
+  --onnx_path outputs/vit_smartcampus.onnx \
+  --batch_sizes 1 4 8 \
+  --warmup 10 \
+  --repeat 50 \
+  --use_wandb \
+  --wandb_project csc4005-lab6-onnx \
+  --wandb_run_name benchmark_onnx_lab6_full_1050 \
+  --wandb_mode online
+```
+
+## 15. Trạng thái checklist nộp bài
+
+- [x] `outputs/export_report.json`
+- [x] `outputs/consistency_report.json`
+- [x] `outputs/benchmark_results.csv`
+- [x] `outputs/benchmark_summary.json`
+- [x] Báo cáo đã điền trong `REPORT_TEMPLATE.md`

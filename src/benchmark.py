@@ -10,7 +10,7 @@ import torch
 
 from src.model import build_model, infer_num_classes_from_checkpoint_metadata, load_checkpoint_state
 from src.runtime import create_onnx_session, run_onnx
-from src.utils import file_size_mb, percentile, save_json, set_seed
+from src.utils import file_size_mb, init_wandb_run, percentile, save_json, set_seed, wandb_run_info
 
 
 def parse_args():
@@ -25,6 +25,18 @@ def parse_args():
     parser.add_argument("--warmup", type=int, default=10)
     parser.add_argument("--repeat", type=int, default=50)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--use_wandb", action="store_true", help="Bật log benchmark lên Weights & Biases.")
+    parser.add_argument("--wandb_project", type=str, default="csc4005-lab6-onnx")
+    parser.add_argument("--wandb_run_name", type=str, default=None)
+    parser.add_argument("--wandb_entity", type=str, default=None)
+    parser.add_argument(
+        "--wandb_mode",
+        type=str,
+        default="online",
+        choices=["online", "offline", "disabled"],
+        help="Chế độ W&B: online/offline/disabled.",
+    )
+    parser.add_argument("--wandb_tags", nargs="*", default=["lab6", "onnx", "benchmark"])
     return parser.parse_args()
 
 
@@ -75,48 +87,88 @@ def main() -> None:
     args = parse_args()
     set_seed(args.seed)
 
-    checkpoint_meta, state_dict = load_checkpoint_state(args.checkpoint)
-    num_classes = infer_num_classes_from_checkpoint_metadata(checkpoint_meta, fallback=args.num_classes)
+    wandb_run = init_wandb_run(
+        args.use_wandb,
+        project=args.wandb_project,
+        run_name=args.wandb_run_name,
+        entity=args.wandb_entity,
+        mode=args.wandb_mode,
+        config=vars(args).copy(),
+        tags=args.wandb_tags,
+    )
 
-    model = build_model(args.model_name, num_classes=num_classes, pretrained=False)
-    model.load_state_dict(state_dict, strict=True)
-    model.eval()
+    try:
+        checkpoint_meta, state_dict = load_checkpoint_state(args.checkpoint)
+        num_classes = infer_num_classes_from_checkpoint_metadata(checkpoint_meta, fallback=args.num_classes)
 
-    session = create_onnx_session(args.onnx_path)
+        model = build_model(args.model_name, num_classes=num_classes, pretrained=False)
+        model.load_state_dict(state_dict, strict=True)
+        model.eval()
 
-    checkpoint_size_mb = file_size_mb(args.checkpoint)
-    onnx_size_mb = file_size_mb(args.onnx_path)
+        session = create_onnx_session(args.onnx_path)
 
-    rows = []
-    for batch_size in args.batch_sizes:
-        batch = torch.randn(batch_size, 3, args.img_size, args.img_size)
-        batch_np = batch.numpy().astype(np.float32)
+        checkpoint_size_mb = file_size_mb(args.checkpoint)
+        onnx_size_mb = file_size_mb(args.onnx_path)
 
-        pt_times = measure_pytorch(model, batch, args.warmup, args.repeat)
-        onnx_times = measure_onnx(session, batch_np, args.warmup, args.repeat)
+        rows = []
+        for batch_size in args.batch_sizes:
+            batch = torch.randn(batch_size, 3, args.img_size, args.img_size)
+            batch_np = batch.numpy().astype(np.float32)
 
-        rows.append(summarize("PyTorch", batch_size, pt_times, checkpoint_size_mb))
-        rows.append(summarize("ONNXRuntime", batch_size, onnx_times, onnx_size_mb))
+            pt_times = measure_pytorch(model, batch, args.warmup, args.repeat)
+            onnx_times = measure_onnx(session, batch_np, args.warmup, args.repeat)
 
-    output_dir = Path(args.onnx_path).parent
-    output_dir.mkdir(parents=True, exist_ok=True)
-    csv_path = output_dir / "benchmark_results.csv"
-    json_path = output_dir / "benchmark_summary.json"
+            rows.append(summarize("PyTorch", batch_size, pt_times, checkpoint_size_mb))
+            rows.append(summarize("ONNXRuntime", batch_size, onnx_times, onnx_size_mb))
 
-    df = pd.DataFrame(rows)
-    df.to_csv(csv_path, index=False)
+        output_dir = Path(args.onnx_path).parent
+        output_dir.mkdir(parents=True, exist_ok=True)
+        csv_path = output_dir / "benchmark_results.csv"
+        json_path = output_dir / "benchmark_summary.json"
 
-    summary = {
-        "checkpoint": args.checkpoint,
-        "onnx_path": args.onnx_path,
-        "warmup": args.warmup,
-        "repeat": args.repeat,
-        "batch_sizes": args.batch_sizes,
-        "rows": rows,
-    }
-    save_json(summary, json_path)
+        df = pd.DataFrame(rows)
+        df.to_csv(csv_path, index=False)
 
-    print(df.to_string(index=False))
+        summary = {
+            "checkpoint": args.checkpoint,
+            "onnx_path": args.onnx_path,
+            "warmup": args.warmup,
+            "repeat": args.repeat,
+            "batch_sizes": args.batch_sizes,
+            "rows": rows,
+        }
+
+        if wandb_run is not None:
+            for row in rows:
+                wandb_run.log(
+                    {
+                        "task": "benchmark",
+                        "runtime": row["runtime"],
+                        "batch_size": row["batch_size"],
+                        "mean_latency_ms": row["mean_latency_ms"],
+                        "median_latency_ms": row["median_latency_ms"],
+                        "p95_latency_ms": row["p95_latency_ms"],
+                        "throughput_img_per_sec": row["throughput_img_per_sec"],
+                        "model_size_mb": row["model_size_mb"],
+                    }
+                )
+
+                runtime_slug = str(row["runtime"]).lower()
+                batch = int(row["batch_size"])
+                wandb_run.summary[f"{runtime_slug}/batch_{batch}/mean_latency_ms"] = row["mean_latency_ms"]
+                wandb_run.summary[f"{runtime_slug}/batch_{batch}/median_latency_ms"] = row["median_latency_ms"]
+                wandb_run.summary[f"{runtime_slug}/batch_{batch}/p95_latency_ms"] = row["p95_latency_ms"]
+                wandb_run.summary[f"{runtime_slug}/batch_{batch}/throughput_img_per_sec"] = row[
+                    "throughput_img_per_sec"
+                ]
+
+        summary["wandb"] = wandb_run_info(wandb_run)
+        save_json(summary, json_path)
+
+        print(df.to_string(index=False))
+    finally:
+        if wandb_run is not None:
+            wandb_run.finish()
 
 
 if __name__ == "__main__":

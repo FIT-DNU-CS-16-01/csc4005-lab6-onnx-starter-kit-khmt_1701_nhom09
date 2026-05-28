@@ -8,9 +8,9 @@ venv/
 # Data, checkpoints, and large artifacts
 data/*
 !data/.gitkeep
-checkpoints/*
-!checkpoints/.gitkeep
-outputs/*
+#checkpoints/*
+#!checkpoints/.gitkeep
+# outputs/*
 !outputs/.gitkeep
 
 *.zip

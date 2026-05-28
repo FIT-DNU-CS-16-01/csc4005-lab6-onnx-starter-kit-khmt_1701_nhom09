@@ -16,5 +16,15 @@
   ],
   "warmup": 10,
   "repeat": 50,
-  "img_size": 224
+  "img_size": 224,
+  "use_wandb": true,
+  "wandb_project": "csc4005-lab6-onnx",
+  "wandb_run_name": "benchmark_onnx",
+  "wandb_entity": null,
+  "wandb_mode": "online",
+  "wandb_tags": [
+    "lab6",
+    "onnx",
+    "benchmark"
+  ]
 }
